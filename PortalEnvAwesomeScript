@@ -1,6 +1,7 @@
 #!/usr/bin/env zsh
 export RUNZSH=no
-
+DEV_FOLDER=~/AlphaSights-Dev
+DEVELOPER_INITIALS="HAnt"
 
 fancy_echo() {
   local fmt="$1"; shift
@@ -26,10 +27,6 @@ append_to_zshrc() {
       printf "\\n%s\\n" "$text" >> "$zshrc"
     fi
   fi
-}
-
-is_application_installed() {
-    
 }
 
 # shellcheck disable=SC2154
@@ -76,11 +73,10 @@ else
     fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
 
-# Installing asdf and plugins
+Installing asdf and plugins
 fancy_echo "Installing asdf"
 if brew install asdf; then
-    fancy_echo "Adding asdf to zshrc"
-    echo -e "\n. $(brew --prefix asdf)/libexec/asdf.sh" >> ${ZDOTDIR:-~}/.zshrc
+    append_to_zshrc ". $(brew --prefix asdf)/libexec/asdf.sh"
     fancy_echo "Installing NodeJs asdf plugin"
     brew install gpg gawk
     if asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git ;then
@@ -95,8 +91,7 @@ if brew install asdf; then
         asdf global ruby 2.6.5
     else
         fancy_echo "Ruby plugin already installed"
-    fi    
-    source ~/.zshrc
+    fi
 else
     fancy_echo "asdf probably already installed"
 fi
@@ -130,6 +125,76 @@ fi
 if read -q "choice?Do you want to install FiraCode font? Press Y/y "; then
   brew tap homebrew/cask-fonts
   brew install --cask font-fira-code
+else
+    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+fi
+
+if read -q "choice?Do you want to install Postgres? Press Y/y "; then
+  brew install postgresql@13
+  brew services start postgresql@13
+  fancy_echo "Adding postgres to zshrc"
+  echo -e '\nexport PATH=/usr/local/opt/postgresql@13/bin:$PATH' >> ${ZDOTDIR:-~}/.zshrc
+  source ~/.zshrc
+  fancy_echo "Creating user postgres"
+  createuser --superuser postgres
+  fancy_echo "Creating DB alpha_dev"
+  createdb alpha_dev
+else
+    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+fi
+
+if read -q "choice?Do you want to configure Pistachio? Press Y/y "; then
+  git clone https://github.com/alphasights/pistachio $DEV_FOLDER/pistachio
+  brew install rbenv
+  brew install shared-mime-info
+  append_to_zshrc 'eval "$(rbenv init -)"'
+  cd $DEV_FOLDER/pistachio
+  ./bin/setup-rbenv.sh
+  cp .example-env .env.development
+  sed -i '' "s/DEVELOPER_INITIALS=.*/DEVELOPER_INITIALS=$DEVELOPER_INITIALS/" .env.development
+  sed -i '' "s/DB_HOST=.*/DB_HOST=localhost/" .env.development
+  bundle install
+  bundle exec rake db:create db:migrate db:reload_views
+  if read -q "choice?Do you want to set up a copy of production data for Pistachio?
+  Just remember you need to be on VPN for that. Press Y/y "; then
+    brew install awscli
+    CAKE_LOCAL_DB_HOST=localhost bin/get-cake-slice
+  else
+    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+  fi
+  if read -q "choice?Do you want to set up a RabbitMQ? Press Y/y "; then
+    brew install rabbitmq
+    export PATH=$PATH:/usr/local/opt/rabbitmq/sbin
+    append_to_zshrc 'export PATH=$PATH:/usr/local/opt/rabbitmq/sbin'
+    brew install wget
+    wget https://github.com/rabbitmq/rabbitmq-delayed-message-exchange/releases/download/3.9.0/rabbitmq_delayed_message_exchange-3.9.0.ez -P /usr/local/Cellar/rabbitmq/3.9.13/plugins
+    rabbitmq-plugins enable rabbitmq_delayed_message_exchange
+    brew services restart rabbitmq
+  else
+    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+  fi
+else
+    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+fi
+
+if read -q "choice?Do you want to configure Client-Portal? Press Y/y "; then
+  git clone https://github.com/alphasights/client-portal.git $DEV_FOLDER/client-portal
+  fancy_echo "Please download and install the lastest version of JDK8 from oracle"
+  open https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
+  brew install kotlin
+  brew tap elastic/tap
+  brew install elastic/tap/elasticsearch-full
+  if [ ! -f "$HOME/.gradle/gradle.properties" ]; then
+    touch "$HOME/.gradle/gradle.properties"
+  fi
+  fancy_echo "Create a github personal access token with repo and package permission scope selected to be added to the gradle and npmrc files"
+  read -p "Enter your GitHub User: "
+  echo "github.username=$REPLY" > "$HOME/.gradle/gradle.properties"
+  read -p "Enter your GitHub Token: "
+  echo "github.token=$REPLY" > "$HOME/.gradle/gradle.properties"
+  npm login --registry https://npm.pkg.github.com/ --scope=@alphasights
+  cd $DEV_FOLDER/client-portal
+  createdb client_portal; createdb client_portal_test;
 else
     fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
