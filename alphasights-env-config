@@ -1,13 +1,16 @@
 #!/usr/bin/env zsh
 export RUNZSH=no
 DEV_FOLDER=~/AlphaSights-Dev
+DEVELOPER_NAME="Henrique Antunes"
+DEVELOPER_EMAIL="henrique.antunes@alphasights.com"
 DEVELOPER_INITIALS="HAnt"
 NODEJS_VERSION=12.22.10
 RUBY_VERSION=2.6.5
 POSTGRESQL_VERSION=13
 
 fancy_echo() {
-  local fmt="$1"; shift
+  local fmt="$1"
+  shift
 
   # shellcheck disable=SC2059
   printf "\\n$fmt\\n" "$@"
@@ -25,9 +28,9 @@ append_to_zshrc() {
 
   if ! grep -Fqs "$text" "$zshrc"; then
     if [ "$skip_new_line" -eq 1 ]; then
-      printf "%s\\n" "$text" >> "$zshrc"
+      printf "%s\\n" "$text" >>"$zshrc"
     else
-      printf "\\n%s\\n" "$text" >> "$zshrc"
+      printf "\\n%s\\n" "$text" >>"$zshrc"
     fi
   fi
 }
@@ -50,20 +53,25 @@ fi
 # It will install Command Line Tools so it may pop up some messages
 # Git and another tools will be installed also
 fancy_echo "Installing Homebrew as package manager. You may need to accept some installations manually"
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+if read -q "choice?Do you want to install Homebrew? Press Y/y "; then
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+else
+  fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+fi
 
 # Slack, Chrome etc will probably be already installed, if not you may chose to install it
 # Install Misc. Apps (Slack)
-if read -q "choice?Do you want to install Slack? Press Y/y "; then
-    fancy_echo "Intalling Slack"
-    if brew install --cask slack;then
-    else
-        fancy_echo "Slack already installed"
-    fi
-    fancy_echo "You can change the theme to Dracula pasting these colors anywhere on the Slack chat and switching sidebar theme"
-    fancy_echo "#282A36,#44475A,#44475A,#8BE9FD,#6272A4,#FFFFFF,#50FA7B,#FF5555"
+if read -q "choice?Do you want to install Slack? Press Y/y
+"; then
+  fancy_echo "Intalling Slack"
+  if brew install --cask slack; then
+  else
+    fancy_echo "Slack already installed"
+  fi
+  fancy_echo "You can change the theme to Dracula pasting these colors anywhere on the Slack chat and switching sidebar theme"
+  fancy_echo "#282A36,#44475A,#44475A,#8BE9FD,#6272A4,#FFFFFF,#50FA7B,#FF5555"
 else
-    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+  fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
 
 # Oh-My-Zsh is a set of configurations for your zsh that can comes with a lot of customizations, plugins and themes
@@ -71,86 +79,89 @@ fi
 if read -q "choice?Do you want to install Oh-My-Zsh?
 Note that if you try to install Oh-My-Zsh later, it will override your .zshrc configurations made by this script.
 But worry not, Oh-My-Zsh creates a copy in your folder called .zshrc.pre-oh-my-zsh so you can recover it
-Press Y/y "; then
-    fancy_echo "Intalling Oh-My-Zsh"
-    if sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"; then
-        source ~/.zshrc
-    else
-        fancy_echo "OhMyZsh probably already installed"
-    fi
+Press Y/y"; then
+  fancy_echo "Intalling Oh-My-Zsh"
+  if sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"; then
+    source ~/.zshrc
+  else
+    fancy_echo "OhMyZsh probably already installed"
+  fi
 else
-    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+  fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
 
 # asdf is a tool to help manage installations of multiples version of languages runetimes
 # we will use it to manage NodeJs and Ruby versions
 # Install asdf and plugins
-fancy_echo "Installing asdf"
-if brew install asdf; then
-    fancy_echo "Append asdf to .zshrc"
-    append_to_zshrc ". $(brew --prefix asdf)/libexec/asdf.sh"
-    fancy_echo "Installing NodeJs asdf plugin"
-    brew install gpg gawk
-    if asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git ;then
-        asdf install nodejs $NODEJS_VERSION
-        fancy_echo "Setting NodeJS version globally to $NODEJS_VERSION"
-        asdf global nodejs $NODEJS_VERSION
-    else
-        fancy_echo "NodeJs plugin already installed"
-    fi
-    fancy_echo "Installing Ruby asdf plugin"
-    if asdf plugin add ruby ;then
-        asdf install ruby $RUBY_VERSION
-        fancy_echo "Setting Ruby version globally to $RUBY_VERSION"
-        asdf global ruby $RUBY_VERSION
-    else
-        fancy_echo "Ruby plugin already installed"
-    fi
-else
-    fancy_echo "asdf probably already installed"
-fi
+# fancy_echo "Installing asdf"
+# if brew install asdf; then
+#   fancy_echo "Append asdf to .zshrc"
+#   append_to_zshrc ". $(brew --prefix asdf)/libexec/asdf.sh"
+#   fancy_echo "Installing NodeJs asdf plugin"
+#   brew install gpg gawk
+#   if asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git; then
+#     asdf install nodejs $NODEJS_VERSION
+#     fancy_echo "Setting NodeJS version globally to $NODEJS_VERSION"
+#     asdf global nodejs $NODEJS_VERSION
+#   else
+#     fancy_echo "NodeJs plugin already installed"
+#   fi
+#   fancy_echo "Installing Ruby asdf plugin"
+#   if asdf plugin add ruby; then
+#     asdf install ruby $RUBY_VERSION
+#     fancy_echo "Setting Ruby version globally to $RUBY_VERSION"
+#     asdf global ruby $RUBY_VERSION
+#   else
+#     fancy_echo "Ruby plugin already installed"
+#   fi
+# else
+#   fancy_echo "asdf probably already installed"
+# fi
 
 # Install IDETools
-if read -q "choice?Do you want to install VSCode, InstelliJ and Iterm2? Press Y/y "; then
-    fancy_echo "Installing ITerm2"
-    brew install --cask iterm2
-    fancy_echo "Installing IntelliJ"
-    brew install --cask intellij-idea
-    fancy_echo "Installing VSCode"
-    brew install --cask visual-studio-code
-    if read -q "choice?Do you want to install Dracula theme for IDEs? Press Y/y "; then
-        fancy_echo "Installing Dracula Theme for VSCode"
-        git clone https://github.com/dracula/visual-studio-code.git ~/.vscode/extensions/theme-dracula
-        cd ~/.vscode/extensions/theme-dracula
-        npm install
-        npm run build
-        fancy_echo "Run Visual Studio Code. The Dracula Syntax Theme will be available from File -> Preferences -> Color Theme dropdown menu."
-        fancy_echo "Installing Dracula Theme for Iterm2"
-        git clone https://github.com/dracula/iterm.git ~/theme-dracula/iterm/
-        fancy_echo "ITerm dracula theme installed to activate visit https://draculatheme.com/iterm"
-        fancy_echo "To install Dracula Theme for IntelliJ visit https://draculatheme.com/jetbrains"
-        fancy_echo "Installing Dracula Theme for Oh-My-Zsh"
-        git clone https://github.com/dracula/zsh.git ~/theme-dracula/zsh
-        ln -s ~/theme-dracula/zsh/dracula.zsh-theme ~/.oh-my-zsh/themes/dracula.zsh-theme
-        fancy_echo "Updating zshrc theme for dracula"
-        sed -i '' 's/ZSH_THEME=.*/ZSH_THEME="dracula"/' ~/.zshrc
-    fi
+if read -q "choice?Do you want to install VSCode, InstelliJ and Iterm2? Press Y/y
+"; then
+  fancy_echo "Installing ITerm2"
+  brew install --cask iterm2
+  fancy_echo "Installing IntelliJ"
+  brew install --cask intellij-idea
+  fancy_echo "Installing VSCode"
+  brew install --cask visual-studio-code
+  if read -q "choice?Do you want to install Dracula theme for IDEs? Press Y/y "; then
+    fancy_echo "Installing Dracula Theme for VSCode"
+    git clone https://github.com/dracula/visual-studio-code.git ~/.vscode/extensions/theme-dracula
+    cd ~/.vscode/extensions/theme-dracula
+    npm install
+    npm run build
+    fancy_echo "Run Visual Studio Code. The Dracula Syntax Theme will be available from File -> Preferences -> Color Theme dropdown menu."
+    fancy_echo "Installing Dracula Theme for Iterm2"
+    git clone https://github.com/dracula/iterm.git ~/theme-dracula/iterm/
+    fancy_echo "ITerm dracula theme installed to activate visit https://draculatheme.com/iterm"
+    fancy_echo "To install Dracula Theme for IntelliJ visit https://draculatheme.com/jetbrains"
+    fancy_echo "Installing Dracula Theme for Oh-My-Zsh"
+    git clone https://github.com/dracula/zsh.git ~/theme-dracula/zsh
+    ln -s ~/theme-dracula/zsh/dracula.zsh-theme ~/.oh-my-zsh/themes/dracula.zsh-theme
+    fancy_echo "Updating zshrc theme for dracula"
+    sed -i '' 's/ZSH_THEME=.*/ZSH_THEME="dracula"/' ~/.zshrc
+  fi
 else
-    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+  fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
 
 # FiraCode is a cool font that have ligadures if you want to develop using it
 # Install FiraCode font
-if read -q "choice?Do you want to install FiraCode font? Press Y/y "; then
+if read -q "choice?Do you want to install FiraCode font? Press Y/y
+"; then
   fancy_echo "Installing FiraCode font"
   brew tap homebrew/cask-fonts
   brew install --cask font-fira-code
 else
-    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+  fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
 
 # Install PostgreSQL
-if read -q "choice?Do you want to install Postgres? Press Y/y "; then
+if read -q "choice?Do you want to install Postgres? Press Y/y
+"; then
   fancy_echo "Installing PostgreSQL Version: $POSTGRESQL_VERSION"
   brew install postgresql@$POSTGRESQL_VERSION
   brew services start postgresql@$POSTGRESQL_VERSION
@@ -162,11 +173,12 @@ if read -q "choice?Do you want to install Postgres? Press Y/y "; then
   fancy_echo "Creating DB alpha_dev"
   createdb alpha_dev
 else
-    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+  fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
 
 # Configure Pistachio App
-if read -q "choice?Do you want to configure Pistachio? Press Y/y "; then
+if read -q "choice?Do you want to configure Pistachio? Press Y/y
+"; then
   fancy_echo "Cloning repository. If its the first time using git it may prompt for user and password(use token)"
   git clone https://github.com/alphasights/pistachio $DEV_FOLDER/pistachio
   fancy_echo "Installing rbenv"
@@ -208,11 +220,12 @@ if read -q "choice?Do you want to configure Pistachio? Press Y/y "; then
     fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
   fi
 else
-    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+  fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
 
 # Configure Portal App
-if read -q "choice?Do you want to configure Client-Portal? Press Y/y "; then
+if read -q "choice?Do you want to configure Client-Portal? Press Y/y
+"; then
   fancy_echo "Cloning repository. If its the first time using git it may prompt for user and password(use token)"
   git clone https://github.com/alphasights/client-portal.git $DEV_FOLDER/client-portal
   fancy_echo "Please download and install the lastest version of JDK8 from oracle"
@@ -227,20 +240,41 @@ if read -q "choice?Do you want to configure Client-Portal? Press Y/y "; then
   fi
   fancy_echo "Create a github personal access token with repo and package permission scope selected to be added to the gradle and npmrc files"
   vared -p 'Gradle github.username: ' -c GITUSERNAME
-  echo "github.username=$GITUSERNAME" >> "$HOME/.gradle/gradle.properties"
+  echo "github.username=$GITUSERNAME" >>"$HOME/.gradle/gradle.properties"
   vared -p 'Gradle github.token: ' -c GITTOKEN
-  echo "github.token=$GITTOKEN" >> "$HOME/.gradle/gradle.properties"
+  echo "github.token=$GITTOKEN" >>"$HOME/.gradle/gradle.properties"
   npm login --registry https://npm.pkg.github.com/ --scope=@alphasights
   cd $DEV_FOLDER/client-portal
   fancy_echo "Creating portal DBs"
-  createdb client_portal; createdb client_portal_test;
+  createdb client_portal
+  createdb client_portal_test
   fancy_echo "Starting ElasticSearch"
   brew services start elasticsearch-full
   fancy_echo "Creating ES Index"
   ./gradlew bootRun --args='--spring.profiles.active=console CreateNewIndex --indexName=advisorships_1'
+  fancy_echo "Installing yarn"
+  npm install --global yarn
 else
-    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+  fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
 
-fancy_echo "Once you install JDK8, if you have trouble building with grade, add this to your zshrc"
+fancy_echo "Once you install JDK8, if you have trouble building with gradle, add this to your zshrc"
 fancy_echo "export JAVA_HOME=$(/usr/libexec/java_home -v 1.8.0_321)"
+
+if read -q "choice?Do you want to configure Client-Portal Login Invite? Press Y/y
+"; then
+  cp client_portal_invite.rb $DEV_FOLDER/pistachio/client_portal_invite.rb
+  cd $DEV_FOLDER/pistachio
+  fancy_echo "Running rails script to create necessary info (Client Contact, Client Contact Project)"
+  rails runner client_portal_invite.rb $DEVELOPER_NAME $DEVELOPER_EMAIL
+  rm $DEV_FOLDER/pistachio/runner client_portal_invite.rb
+  fancy_echo "Creating badge for Portal Login"
+  thor create_project_feature:create_feature --name="portal_login" --description="Enable login for the Client Portal"
+  thor set_project_feature_badge:enable --ids=367316 --feature_name=portal_login --creator_initials=HAnt
+  fancy_echo "Portal Login should be all set now"
+  fancy_echo "Find the contact with your name in http://localhost:3000/client/contacts and send a portal invite"
+  fancy_echo "After sending invite, go to portal DB and in the invitations table copy the token link"
+  fancy_echo "Access http://localhost:8081/invitations/{token} to set up the portal password"
+else
+  fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+fi
