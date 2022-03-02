@@ -1,0 +1,135 @@
+#!/usr/bin/env zsh
+export RUNZSH=no
+
+
+fancy_echo() {
+  local fmt="$1"; shift
+
+  # shellcheck disable=SC2059
+  printf "\\n$fmt\\n" "$@"
+}
+
+append_to_zshrc() {
+  local text="$1" zshrc
+  local skip_new_line="${2:-0}"
+
+  if [ -w "$HOME/.zshrc.local" ]; then
+    zshrc="$HOME/.zshrc.local"
+  else
+    zshrc="$HOME/.zshrc"
+  fi
+
+  if ! grep -Fqs "$text" "$zshrc"; then
+    if [ "$skip_new_line" -eq 1 ]; then
+      printf "%s\\n" "$text" >> "$zshrc"
+    else
+      printf "\\n%s\\n" "$text" >> "$zshrc"
+    fi
+  fi
+}
+
+is_application_installed() {
+    
+}
+
+# shellcheck disable=SC2154
+trap 'ret=$?; test $ret -ne 0 && printf "failed\n\n" >&2; exit $ret' EXIT
+
+set -e
+
+if [ ! -d "$HOME/.bin/" ]; then
+  mkdir "$HOME/.bin"
+fi
+
+if [ ! -f "$HOME/.zshrc" ]; then
+  touch "$HOME/.zshrc"
+fi
+
+# This script will install everything you need from a fresh MacBook to a development ready environment
+# First we install Homebrew. It will be the package manager for most of installed stuff
+# It will install Command Line Tools so it may pop up some messages
+# Git and another tools will be installed also
+# /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install Misc. Apps
+if read -q "choice?Do you want to install Slack? Press Y/y "; then
+    if brew install --cask slack;then
+    else
+        fancy_echo "Slack already installed"
+    fi
+    fancy_echo "You can change the theme to Dracule pasting these colors anywhere on the chat and switching sidebar"
+    echo "#282A36,#44475A,#44475A,#8BE9FD,#6272A4,#FFFFFF,#50FA7B,#FF5555"
+else
+    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+fi
+
+# Install Oh-My-Zsh. 
+if read -q "choice?Do you want to install Oh-My-Zsh?
+Note that if you try to install oh-my-zsh later, most of your .zshrc configurations in this script will be lost
+Press Y/y "; then
+    if sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"; then
+        source ~/.zshrc
+    else
+        fancy_echo "OhMyZsh probably already installed"
+    fi
+else
+    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+fi
+
+# Installing asdf and plugins
+fancy_echo "Installing asdf"
+if brew install asdf; then
+    fancy_echo "Adding asdf to zshrc"
+    echo -e "\n. $(brew --prefix asdf)/libexec/asdf.sh" >> ${ZDOTDIR:-~}/.zshrc
+    fancy_echo "Installing NodeJs asdf plugin"
+    brew install gpg gawk
+    if asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git ;then
+        asdf install nodejs 12.22.10
+        asdf global nodejs 12.22.10
+    else
+        fancy_echo "NodeJs plugin already installed"
+    fi
+    fancy_echo "Installing Ruby asdf plugin"
+    if asdf plugin add ruby ;then
+        asdf install ruby 2.6.5
+        asdf global ruby 2.6.5
+    else
+        fancy_echo "Ruby plugin already installed"
+    fi    
+    source ~/.zshrc
+else
+    fancy_echo "asdf probably already installed"
+fi
+
+# Install IDETools
+if read -q "choice?Do you want to install VSCode, InstelliJ and OhMyZsh/Iterm2? Press Y/y "; then
+    brew install --cask iterm2
+    brew install --cask intellij-idea
+    brew install --cask visual-studio-code
+    if read -q "choice?Do you want to install Dracula theme for IDEs? Press Y/y "; then
+        fancy_echo "Installing Dracula Theme for VSCode"
+        git clone https://github.com/dracula/visual-studio-code.git ~/.vscode/extensions/theme-dracula
+        cd ~/.vscode/extensions/theme-dracula
+        npm install
+        npm run build
+        fancy_echo "Run Visual Studio Code. The Dracula Syntax Theme will be available from File -> Preferences -> Color Theme dropdown menu."
+        fancy_echo "Installing Dracula Theme for Iterm2"
+        git clone https://github.com/dracula/iterm.git ~/theme-dracula/iterm/
+        fancy_echo "ITerm dracula theme installed to activate visit https://draculatheme.com/iterm"
+        fancy_echo "To install Dracula Theme for IntelliJ visit https://draculatheme.com/jetbrains"
+        fancy_echo "Installing Dracula Theme for Oh-My-Zsh"
+        git clone https://github.com/dracula/zsh.git ~/theme-dracula/zsh
+        ln -s ~/theme-dracula/zsh/dracula.zsh-theme ~/.oh-my-zsh/themes/dracula.zsh-theme
+        fancy_echo "Updating zshrc theme for dracula"
+        sed -i '' 's/ZSH_THEME=.*/ZSH_THEME="dracula"/' ~/.zshrc
+    fi
+else
+    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+fi
+
+if read -q "choice?Do you want to install FiraCode font? Press Y/y "; then
+  brew tap homebrew/cask-fonts
+  brew install --cask font-fira-code
+else
+    fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
+fi
