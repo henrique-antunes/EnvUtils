@@ -2,6 +2,9 @@
 export RUNZSH=no
 DEV_FOLDER=~/AlphaSights-Dev
 DEVELOPER_INITIALS="HAnt"
+NODEJS_VERSION=12.22.10
+RUBY_VERSION=2.6.5
+POSTGRESQL_VERSION=13
 
 fancy_echo() {
   local fmt="$1"; shift
@@ -46,24 +49,30 @@ fi
 # First we install Homebrew. It will be the package manager for most of installed stuff
 # It will install Command Line Tools so it may pop up some messages
 # Git and another tools will be installed also
-# /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fancy_echo "Installing Homebrew as package manager. You may need to accept some installations manually"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# Install Misc. Apps
+# Slack, Chrome etc will probably be already installed, if not you may chose to install it
+# Install Misc. Apps (Slack)
 if read -q "choice?Do you want to install Slack? Press Y/y "; then
+    fancy_echo "Intalling Slack"
     if brew install --cask slack;then
     else
         fancy_echo "Slack already installed"
     fi
-    fancy_echo "You can change the theme to Dracule pasting these colors anywhere on the chat and switching sidebar"
-    echo "#282A36,#44475A,#44475A,#8BE9FD,#6272A4,#FFFFFF,#50FA7B,#FF5555"
+    fancy_echo "You can change the theme to Dracula pasting these colors anywhere on the Slack chat and switching sidebar theme"
+    fancy_echo "#282A36,#44475A,#44475A,#8BE9FD,#6272A4,#FFFFFF,#50FA7B,#FF5555"
 else
     fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
 
-# Install Oh-My-Zsh. 
+# Oh-My-Zsh is a set of configurations for your zsh that can comes with a lot of customizations, plugins and themes
+# Install Oh-My-Zsh.
 if read -q "choice?Do you want to install Oh-My-Zsh?
-Note that if you try to install oh-my-zsh later, most of your .zshrc configurations in this script will be lost
+Note that if you try to install Oh-My-Zsh later, it will override your .zshrc configurations made by this script.
+But worry not, Oh-My-Zsh creates a copy in your folder called .zshrc.pre-oh-my-zsh so you can recover it
 Press Y/y "; then
+    fancy_echo "Intalling Oh-My-Zsh"
     if sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"; then
         source ~/.zshrc
     else
@@ -73,22 +82,27 @@ else
     fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
 
-Installing asdf and plugins
+# asdf is a tool to help manage installations of multiples version of languages runetimes
+# we will use it to manage NodeJs and Ruby versions
+# Install asdf and plugins
 fancy_echo "Installing asdf"
 if brew install asdf; then
+    fancy_echo "Append asdf to .zshrc"
     append_to_zshrc ". $(brew --prefix asdf)/libexec/asdf.sh"
     fancy_echo "Installing NodeJs asdf plugin"
     brew install gpg gawk
     if asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git ;then
-        asdf install nodejs 12.22.10
-        asdf global nodejs 12.22.10
+        asdf install nodejs $NODEJS_VERSION
+        fancy_echo "Setting NodeJS version globally to $NODEJS_VERSION"
+        asdf global nodejs $NODEJS_VERSION
     else
         fancy_echo "NodeJs plugin already installed"
     fi
     fancy_echo "Installing Ruby asdf plugin"
     if asdf plugin add ruby ;then
-        asdf install ruby 2.6.5
-        asdf global ruby 2.6.5
+        asdf install ruby $RUBY_VERSION
+        fancy_echo "Setting Ruby version globally to $RUBY_VERSION"
+        asdf global ruby $RUBY_VERSION
     else
         fancy_echo "Ruby plugin already installed"
     fi
@@ -97,9 +111,12 @@ else
 fi
 
 # Install IDETools
-if read -q "choice?Do you want to install VSCode, InstelliJ and OhMyZsh/Iterm2? Press Y/y "; then
+if read -q "choice?Do you want to install VSCode, InstelliJ and Iterm2? Press Y/y "; then
+    fancy_echo "Installing ITerm2"
     brew install --cask iterm2
+    fancy_echo "Installing IntelliJ"
     brew install --cask intellij-idea
+    fancy_echo "Installing VSCode"
     brew install --cask visual-studio-code
     if read -q "choice?Do you want to install Dracula theme for IDEs? Press Y/y "; then
         fancy_echo "Installing Dracula Theme for VSCode"
@@ -122,19 +139,24 @@ else
     fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
 
+# FiraCode is a cool font that have ligadures if you want to develop using it
+# Install FiraCode font
 if read -q "choice?Do you want to install FiraCode font? Press Y/y "; then
+  fancy_echo "Installing FiraCode font"
   brew tap homebrew/cask-fonts
   brew install --cask font-fira-code
 else
     fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
 
+# Install PostgreSQL
 if read -q "choice?Do you want to install Postgres? Press Y/y "; then
-  brew install postgresql@13
-  brew services start postgresql@13
-  fancy_echo "Adding postgres to zshrc"
-  echo -e '\nexport PATH=/usr/local/opt/postgresql@13/bin:$PATH' >> ${ZDOTDIR:-~}/.zshrc
-  source ~/.zshrc
+  fancy_echo "Installing PostgreSQL Version: $POSTGRESQL_VERSION"
+  brew install postgresql@$POSTGRESQL_VERSION
+  brew services start postgresql@$POSTGRESQL_VERSION
+  fancy_echo "Append postgres to zshrc"
+  append_to_zshrc 'export PATH=/usr/local/opt/postgresql@'"$POSTGRESQL_VERSION"'/bin:$PATH'
+  export PATH=/usr/local/opt/postgresql@'"$POSTGRESQL_VERSION"'/bin:$PATH
   fancy_echo "Creating user postgres"
   createuser --superuser postgres
   fancy_echo "Creating DB alpha_dev"
@@ -143,16 +165,25 @@ else
     fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
 
+# Configure Pistachio App
 if read -q "choice?Do you want to configure Pistachio? Press Y/y "; then
+  fancy_echo "Cloning repository. If its the first time using git it may prompt for user and password(use token)"
   git clone https://github.com/alphasights/pistachio $DEV_FOLDER/pistachio
+  fancy_echo "Installing rbenv"
   brew install rbenv
   brew install shared-mime-info
+  fancy_echo "Append rbenv to zshrc"
   append_to_zshrc 'eval "$(rbenv init -)"'
+  eval "$(rbenv init -)"
+  fancy_echo "Moving to pistachio folder and running setup-rbenv"
   cd $DEV_FOLDER/pistachio
   ./bin/setup-rbenv.sh
+  fancy_echo "Creating a copy of .env"
   cp .example-env .env.development
+  fancy_echo "Replace .env variables"
   sed -i '' "s/DEVELOPER_INITIALS=.*/DEVELOPER_INITIALS=$DEVELOPER_INITIALS/" .env.development
   sed -i '' "s/DB_HOST=.*/DB_HOST=localhost/" .env.development
+  fancy_echo "Running bundle installs"
   bundle install
   bundle exec rake db:create db:migrate db:reload_views
   if read -q "choice?Do you want to set up a copy of production data for Pistachio?
@@ -163,10 +194,13 @@ if read -q "choice?Do you want to configure Pistachio? Press Y/y "; then
     fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
   fi
   if read -q "choice?Do you want to set up a RabbitMQ? Press Y/y "; then
+    fancy_echo "Installing rabbitmq"
     brew install rabbitmq
     export PATH=$PATH:/usr/local/opt/rabbitmq/sbin
+    fancy_echo "Append rabbitmq to zshrc"
     append_to_zshrc 'export PATH=$PATH:/usr/local/opt/rabbitmq/sbin'
     brew install wget
+    fancy_echo "Installing delayed messages plugin"
     wget https://github.com/rabbitmq/rabbitmq-delayed-message-exchange/releases/download/3.9.0/rabbitmq_delayed_message_exchange-3.9.0.ez -P /usr/local/Cellar/rabbitmq/3.9.13/plugins
     rabbitmq-plugins enable rabbitmq_delayed_message_exchange
     brew services restart rabbitmq
@@ -177,24 +211,36 @@ else
     fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
 
+# Configure Portal App
 if read -q "choice?Do you want to configure Client-Portal? Press Y/y "; then
+  fancy_echo "Cloning repository. If its the first time using git it may prompt for user and password(use token)"
   git clone https://github.com/alphasights/client-portal.git $DEV_FOLDER/client-portal
   fancy_echo "Please download and install the lastest version of JDK8 from oracle"
   open https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
+  fancy_echo "Installing kotlin"
   brew install kotlin
+  fancy_echo "Installing ElasticSearch"
   brew tap elastic/tap
   brew install elastic/tap/elasticsearch-full
   if [ ! -f "$HOME/.gradle/gradle.properties" ]; then
     touch "$HOME/.gradle/gradle.properties"
   fi
   fancy_echo "Create a github personal access token with repo and package permission scope selected to be added to the gradle and npmrc files"
-  read -p "Enter your GitHub User: "
-  echo "github.username=$REPLY" > "$HOME/.gradle/gradle.properties"
-  read -p "Enter your GitHub Token: "
-  echo "github.token=$REPLY" > "$HOME/.gradle/gradle.properties"
+  vared -p 'Gradle github.username: ' -c GITUSERNAME
+  echo "github.username=$GITUSERNAME" >> "$HOME/.gradle/gradle.properties"
+  vared -p 'Gradle github.token: ' -c GITTOKEN
+  echo "github.token=$GITTOKEN" >> "$HOME/.gradle/gradle.properties"
   npm login --registry https://npm.pkg.github.com/ --scope=@alphasights
   cd $DEV_FOLDER/client-portal
+  fancy_echo "Creating portal DBs"
   createdb client_portal; createdb client_portal_test;
+  fancy_echo "Starting ElasticSearch"
+  brew services start elasticsearch-full
+  fancy_echo "Creating ES Index"
+  ./gradlew bootRun --args='--spring.profiles.active=console CreateNewIndex --indexName=advisorships_1'
 else
     fancy_echo "'$choice' not 'Y' or 'y'. Moving On..."
 fi
+
+fancy_echo "Once you install JDK8, if you have trouble building with grade, add this to your zshrc"
+fancy_echo "export JAVA_HOME=$(/usr/libexec/java_home -v 1.8.0_321)"
